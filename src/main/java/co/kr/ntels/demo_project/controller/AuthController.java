@@ -78,6 +78,7 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwt.getAccessToken());
+        headers.set("Authorization", "Refresh " + jwt.getRefreshToken()); // 테스트용
         redis.setRedis(jwt.getAccessToken(), jwt.getRefreshToken(), refreshTokenExpiration);
 
         return ResponseEntity.ok().headers(headers).body(new LoginResponse(passwordUpdateRequired));

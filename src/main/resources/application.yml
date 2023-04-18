@@ -21,7 +21,7 @@ spring:
     jwt:
       secret: 9976ed8529fe16bb7b86662aa6f2ef6f1048120d7bebbd723b66f0e0ef1d4cac04d6ae2d1b3f849c0a7db271d40215db2648c9c70e71b337308ee3ab867b3492
       expiration: 60000 # 1분 테스트
-      refreshTokenExpiration: 864000000 # 10 day in milliseconds
+      refreshTokenExpiration: 120000 # 2분 테스트
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher

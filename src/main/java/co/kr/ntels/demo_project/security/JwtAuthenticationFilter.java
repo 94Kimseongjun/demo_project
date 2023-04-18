@@ -61,7 +61,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                // redis에 새로 넣어주기
                redis.deleteByKey(jwt);
                redis.setRedis(newAccessToken,refreshToken,(int)differenceInMillis);
-
+               logger.info("Redis New AccessToken Set Time:" + differenceInMillis);
                setAuthenticationInContext(userId, request);
 //               UserDetails userDetails = customUserDetailsService.loadUserById(userId);
 //               UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
