@@ -12,7 +12,7 @@ import co.kr.ntels.demo_project.security.JwtTokenProvider;
 import co.kr.ntels.demo_project.security.dto.Token;
 import co.kr.ntels.demo_project.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.beans.factory.annotation.Value;
 
 
@@ -31,7 +31,7 @@ import javax.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
+
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,7 +71,6 @@ public class AuthController {
         userRepository.updateLastLoginAt(now, user.getId());
 
         boolean passwordUpdateRequired = user.getPasswordUpdateAt().plusDays(90).isBefore(now);
-
 
         //redisTemplate.opsForValue().set(jwt.getAccessToken(), jwt.getRefreshToken(), refreshTokenExpiration, TimeUnit.MILLISECONDS);
 
