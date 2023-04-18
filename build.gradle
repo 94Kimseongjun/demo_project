@@ -1,0 +1,39 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '2.7.11-SNAPSHOT'
+	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+}
+
+group = 'co.kr.ntels'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+	maven { url 'https://repo.spring.io/snapshot' }
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter' // Spring Boot 필수 의존성 포함
+	testImplementation 'org.springframework.boot:spring-boot-starter-test' // 테스트 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-web' // 웹 관련 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // JPA 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-security' // Spring Security 의존성
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.2' // JWT API 라이브러리 의존성
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.2' // JWT API를 구현한 라이브러리 의존성
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.2' // jackson 의존성
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:2.7.2' // mariadb jdbc 드라이버 의존성
+	compileOnly 'org.projectlombok:lombok:1.18.22' //Lombok 라이브러리 의존성
+	annotationProcessor 'org.projectlombok:lombok:1.18.22' // Lombok 어노테이션 처리 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-validation' // Bean Validation 구현체인 Hibernate Validator 의존성
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310' // jackson을 이용하여 LocalDate, LocalTime, LocalDateTime 유형 처리 의존성
+	implementation 'io.springfox:springfox-boot-starter:3.0.0' // Swagger API 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis' // redis
+	implementation 'redis.clients:jedis:3.6.0'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
