@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
+import co.kr.ntels.demo_project.redis.Redis;
 import co.kr.ntels.demo_project.security.dto.Token;
 import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,8 @@ import io.jsonwebtoken.security.Keys;
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider {
+    private final Redis redis;
+
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
     @Value("${spring.security.jwt.secret}")
     private String jwtSecret;
@@ -60,9 +63,6 @@ public class JwtTokenProvider {
                 .build();
     }
 
-
-
-
     public Long getUserIdFromJWT(String token) {
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(getSignKey())
@@ -71,17 +71,19 @@ public class JwtTokenProvider {
                     .getBody();
             return Long.parseLong(claims.getSubject());
     }
-    public String reGenerateToken(Long userId){
-            Date now = new Date();
-            Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
-            String newAccessToken = Jwts
-                    .builder()
-                    .setSubject(Long.toString(userId))
-                    .setIssuedAt(new Date())
-                    .setExpiration(expiryDate)
-                    .signWith(getSignKey())
-                    .compact();
-            return newAccessToken;
+    public String reGenerateToken(Long userId, String oldAccessToken){
+
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        String newAccessToken = Jwts
+                .builder()
+                .setSubject(Long.toString(userId))
+                .setIssuedAt(new Date())
+                .setExpiration(expiryDate)
+                .signWith(getSignKey())
+                .compact();
+
+        return newAccessToken;
     }
 
     public boolean validateToken(String authToken) {
@@ -92,6 +94,7 @@ public class JwtTokenProvider {
             logger.error("Invalid JWT token");
         } catch (ExpiredJwtException ex) {
             logger.error("Expired JWT token");
+            throw ex; // 예외 발생시켜서 refresh 토큰 검증 및 newAccessToken 생성하는 로직으로 흐름 제어
         } catch (UnsupportedJwtException ex) {
             logger.error("Unsupported JWT token");
         } catch (IllegalArgumentException ex) {
@@ -104,6 +107,7 @@ public class JwtTokenProvider {
     }
 
     // method to validate a refresh token and return its expiry date
+
     public Date getExpiryDate(String token) {
         try {
             Key key = getSignKey();
@@ -124,4 +128,13 @@ public class JwtTokenProvider {
         }
         return null;
     }
+
+    public String validateRefreshToken(String token){
+        String refreshToken = redis.getValueByKey(token);
+        if (refreshToken!=null && !refreshToken.isEmpty()){
+            return refreshToken;
+        }
+        return null;
+    }
+
 }

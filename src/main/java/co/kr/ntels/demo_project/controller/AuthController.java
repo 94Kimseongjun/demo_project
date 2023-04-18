@@ -6,6 +6,7 @@ import co.kr.ntels.demo_project.exception.AppException;
 import co.kr.ntels.demo_project.model.Role;
 import co.kr.ntels.demo_project.model.RoleName;
 import co.kr.ntels.demo_project.model.User;
+import co.kr.ntels.demo_project.redis.Redis;
 import co.kr.ntels.demo_project.repository.RoleRepository;
 import co.kr.ntels.demo_project.repository.UserRepository;
 import co.kr.ntels.demo_project.security.JwtTokenProvider;
@@ -46,7 +47,8 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
     private final PasswordValidator passwordValidator;
-    private final RedisTemplate<String, Object> redisTemplate;
+
+    private final Redis redis;
 
     @Value("${spring.security.jwt.refreshTokenExpiration}")
     private int refreshTokenExpiration;
@@ -76,6 +78,7 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwt.getAccessToken());
+        redis.setRedis(jwt.getAccessToken(), jwt.getRefreshToken(), refreshTokenExpiration);
 
         return ResponseEntity.ok().headers(headers).body(new LoginResponse(passwordUpdateRequired));
 
