@@ -12,7 +12,14 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MariaDBDialect
-        format_sql: true
+        show_sql: true
+        use_sql_comments: true
+  logging:
+    level:
+      org.hibernate.SQL: DEBUG
+      org.hibernate.type.descriptor.sql.BasicBinder: DEBUG
+    file:
+      name: demo_project.log
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -20,8 +27,9 @@ spring:
   security:
     jwt:
       secret: 9976ed8529fe16bb7b86662aa6f2ef6f1048120d7bebbd723b66f0e0ef1d4cac04d6ae2d1b3f849c0a7db271d40215db2648c9c70e71b337308ee3ab867b3492
-      expiration: 60000 # 1분 테스트
-      refreshTokenExpiration: 120000 # 2분 테스트
+      refreshSecret: a30b275ba93f8462c8f8e13f82ec0f1233e1f3abbf6514673e773e04c8773d6e345ee73db7ea347f0919f324a4fff8c49c58c61c731cdc92fbf6caf6563998fc
+      expiration: 3600000 # AccessToken 1시간
+      refreshTokenExpiration: 86400000 # 24시간
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher

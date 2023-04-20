@@ -2,7 +2,6 @@ package co.kr.ntels.demo_project.controller;
 
 import co.kr.ntels.demo_project.dto.*;
 import co.kr.ntels.demo_project.exception.AppException;
-
 import co.kr.ntels.demo_project.model.Role;
 import co.kr.ntels.demo_project.model.RoleName;
 import co.kr.ntels.demo_project.model.User;
@@ -13,11 +12,7 @@ import co.kr.ntels.demo_project.security.JwtTokenProvider;
 import co.kr.ntels.demo_project.security.dto.Token;
 import co.kr.ntels.demo_project.util.PasswordValidator;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.beans.factory.annotation.Value;
-
-
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,11 +24,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
-
 import java.time.LocalDateTime;
 import java.util.Collections;
-
-
 import org.springframework.transaction.annotation.Transactional;
 
 
@@ -74,13 +66,11 @@ public class AuthController {
 
         boolean passwordUpdateRequired = user.getPasswordUpdateAt().plusDays(90).isBefore(now);
 
-        //redisTemplate.opsForValue().set(jwt.getAccessToken(), jwt.getRefreshToken(), refreshTokenExpiration, TimeUnit.MILLISECONDS);
-
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwt.getAccessToken());
-        headers.set("Authorization", "Refresh " + jwt.getRefreshToken()); // 테스트용
+        headers.add("Authorization", "Refresh " + jwt.getRefreshToken()); // 테스트용
         redis.setRedis(jwt.getAccessToken(), jwt.getRefreshToken(), refreshTokenExpiration);
-
+        redis.setRedis(jwt.getRefreshToken(), jwt.getAccessToken(), refreshTokenExpiration);
         return ResponseEntity.ok().headers(headers).body(new LoginResponse(passwordUpdateRequired));
 
     }
@@ -112,14 +102,6 @@ public class AuthController {
         user.setRoles(Collections.singleton(userRole));
         userRepository.save(user);
 
-        /*
-        User result = userRepository.save(user);
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentContextPath().path("/api/users/{username}")
-                .buildAndExpand(result.getUsername()).toUri();
-        return ResponseEntity.created(location).body(new ApiResponse(true, "회원가입이 성공적으로 완료 되었습니다."));
-         */
-
         return ResponseEntity.ok().body((new ApiResponse(true, "회원가입이 성공적으로 완료 되었습니다.")));
     }
 
@@ -141,14 +123,5 @@ public class AuthController {
         return ResponseEntity.ok().body(new ApiResponse(true, "사용가능한 Email 입니다."));
     }
 
-    /*
-    @GetMapping("/check/usernameOrEmail")
-    public ResponseEntity<?> existByusernameOrEmail(@Valid @RequestBody CheckUsernameOrEmail checkUsernameOrEmail){
-        if(userRepository.existByUsernameOrEmail(checkUsernameOrEmail.getUsernameOrEmail(), checkUsernameOrEmail.getUsernameOrEmail())){
-            return new ResponseEntity<>(new ApiResponse(false,"해당 username 또는 Email이 이미 존재 합니다."),HttpStatus.BAD_REQUEST);
-        }
-        return ResponseEntity.ok().body(new ApiResponse(true,"사용가능합니다."));
-    }
-     */
 }
 

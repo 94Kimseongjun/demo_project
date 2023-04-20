@@ -3,13 +3,12 @@ package co.kr.ntels.demo_project.security;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
-
 import co.kr.ntels.demo_project.redis.Redis;
 import co.kr.ntels.demo_project.security.dto.Token;
 import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
@@ -18,16 +17,19 @@ import io.jsonwebtoken.security.Keys;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtTokenProvider {
     private final Redis redis;
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
     @Value("${spring.security.jwt.secret}")
     private String jwtSecret;
     @Value("${spring.security.jwt.expiration}")
     private int jwtExpirationInMs;
     @Value("${spring.security.jwt.refreshTokenExpiration}")
     private int refreshTokenExpiration;
+
+    @Value("${spring.security.jwt.refreshSecret}")
+    private String refreshSecret;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -44,7 +46,7 @@ public class JwtTokenProvider {
                 .setSubject(Long.toString(userPrincipal.getId()))
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
-                .signWith(getSignKey())
+                .signWith(getSignKey(jwtSecret))
                 .compact();
 
         String refreshToken = Jwts
@@ -52,7 +54,7 @@ public class JwtTokenProvider {
                 .setSubject(Long.toString(userPrincipal.getId()))
                 .setIssuedAt(new Date())
                 .setExpiration(refreshExpiryDate)
-                .signWith(getSignKey())
+                .signWith(getSignKey(refreshSecret))
                 .compact();
 
         return Token.builder()
@@ -63,70 +65,65 @@ public class JwtTokenProvider {
                 .build();
     }
 
-    public Long getUserIdFromJWT(String token) {
+    public Long getUserIdFromJWT(String token, String secret) {
             Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(getSignKey())
+                    .setSigningKey(getSignKey(secret))
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
             return Long.parseLong(claims.getSubject());
     }
-    public String reGenerateToken(Long userId, String oldAccessToken){
+    public Token reGenerateToken(Long userId){
 
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        Date refreshExpiryDate = new Date(now.getTime() + refreshTokenExpiration);
         String newAccessToken = Jwts
                 .builder()
                 .setSubject(Long.toString(userId))
                 .setIssuedAt(new Date())
                 .setExpiration(expiryDate)
-                .signWith(getSignKey())
+                .signWith(getSignKey(jwtSecret))
                 .compact();
 
-        return newAccessToken;
+        String newRefreshToken = Jwts
+                .builder()
+                .setSubject(Long.toString(userId))
+                .setIssuedAt(new Date())
+                .setExpiration(refreshExpiryDate)
+                .signWith(getSignKey(refreshSecret))
+                .compact();
+
+        return Token.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .expiresIn(expiryDate)
+                .refreshExpiresIn(refreshExpiryDate)
+                .build();
     }
 
-    public boolean validateToken(String authToken) {
+    public boolean validateToken(String authToken, String secret) {
         try {
-            Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(authToken);
+            Jwts.parserBuilder().setSigningKey(getSignKey(secret)).build().parseClaimsJws(authToken);
             return true;
         } catch (MalformedJwtException ex) {
-            logger.error("Invalid JWT token");
+            log.error("Invalid JWT token");
         } catch (ExpiredJwtException ex) {
-            logger.error("Expired JWT token");
+            log.error("Expired JWT token");
             throw ex; // 예외 발생시켜서 refresh 토큰 검증 및 newAccessToken 생성하는 로직으로 흐름 제어
         } catch (UnsupportedJwtException ex) {
-            logger.error("Unsupported JWT token");
+            log.error("Unsupported JWT token");
         } catch (IllegalArgumentException ex) {
-            logger.error("JWT claims string is empty.");
+            log.error("JWT claims string is empty.");
+        } catch (SignatureException ex) {
+            log.error("JWT signature does not match locally computed signature.");
+            throw ex; // 위조 및 탈취 가능성, 들어온 key 관련 redis 데이터 모두 삭제
+
         }
         return false;
     }
-    private Key getSignKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-    }
-
-    // method to validate a refresh token and return its expiry date
-
-    public Date getExpiryDate(String token) {
-        try {
-            Key key = getSignKey();
-            Jwts.parser().setSigningKey(key).parseClaimsJws(token);
-            Claims claims = Jwts.parser().setSigningKey(key).parseClaimsJws(token).getBody();
-            Date expiryDate = claims.getExpiration();
-            return expiryDate;
-        } catch (SignatureException ex) {
-            // handle invalid signature
-        } catch (MalformedJwtException ex) {
-            // handle invalid JWT token
-        } catch (ExpiredJwtException ex) {
-            // handle expired JWT token
-        } catch (UnsupportedJwtException ex) {
-            // handle unsupported JWT token
-        } catch (IllegalArgumentException ex) {
-            // handle JWT token claims string is empty
-        }
-        return null;
+    private Key getSignKey(String secret) {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String validateRefreshToken(String token){
@@ -134,6 +131,7 @@ public class JwtTokenProvider {
         if (refreshToken!=null && !refreshToken.isEmpty()){
             return refreshToken;
         }
+        log.info("Redis not found Key");
         return null;
     }
 
