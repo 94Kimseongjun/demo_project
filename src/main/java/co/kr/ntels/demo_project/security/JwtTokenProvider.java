@@ -64,7 +64,7 @@ public class JwtTokenProvider {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("authorities", authorities);
-        claims.put("username", username);
+        //claims.put("username", username);
         log.info("TOKEN CREATE, USER_ID -> " + userPrincipal.getId());
 
         String accessToken = Jwts
@@ -193,7 +193,7 @@ public class JwtTokenProvider {
                 Arrays.stream(claims.get("authorities").toString().split(","))
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
-        String username = (String) claims.get("username");
+        //String username = (String) claims.get("username");
         // UserDetails 객체를 만들어서 Authentication 리턴
         /*
             public User(String name, String username, String email, String password, LocalDateTime passwordUpdateAt, LocalDateTime lastLoginAt) {
@@ -206,8 +206,8 @@ public class JwtTokenProvider {
     }
          */
 
-        User user = new User(null, username, null,null,null,null);
-        user.setUsername(username);
+        User user = new User(null, null, null,null,null,null);
+        //user.setUsername(username);
         user.setId(userId);
         //List<String> rolesList = Arrays.asList(claims.get("authorities").toString().split(","));
         //Set<Role> roles = rolesList.stream().map(Role::new).collect(Collectors.toSet());
