@@ -48,7 +48,6 @@ public class AuthController {
     @Transactional
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getUsernameOrEmail(),
@@ -68,13 +67,11 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + jwt.getAccessToken());
-        headers.add("Authorization", "Refresh " + jwt.getRefreshToken()); // 테스트용
+        //headers.add("Authorization", "Refresh " + jwt.getRefreshToken()); // 테스트용
         redis.setRedis(jwt.getAccessToken(), jwt.getRefreshToken(), refreshTokenExpiration);
         redis.setRedis(jwt.getRefreshToken(), jwt.getAccessToken(), refreshTokenExpiration);
         return ResponseEntity.ok().headers(headers).body(new LoginResponse(passwordUpdateRequired));
-
     }
-
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignUpRequest signUpRequest) {

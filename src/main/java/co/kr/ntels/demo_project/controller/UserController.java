@@ -47,9 +47,15 @@ public class UserController {
         if(currentUser == null) {
             throw new AccessDeniedException("You are not authorized to access this resource.");
         }
-        UserResponse userResponse = new UserResponse(currentUser.getId(), currentUser.getUsername(),
-                currentUser.getName(), currentUser.getEmail(),null,null,null,null);
+        //UserResponse userResponse = new UserResponse(currentUser.getId(), currentUser.getUsername(),
+        //        currentUser.getName(), currentUser.getEmail(),null,null,null,null);
         User user = userRepository.findById(currentUser.getId()).orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUser.getId()));
+
+        UserResponse userResponse = new UserResponse();
+        userResponse.setId(user.getId());
+        userResponse.setName(user.getName());
+        userResponse.setUsername(user.getUsername());
+        userResponse.setEmail(user.getEmail());
         userResponse.setLastLoginAt(user.getLastLoginAt());
         userResponse.setCreatedAt(user.getCreatedAt());
         userResponse.setUpdatedAt(user.getUpdatedAt());

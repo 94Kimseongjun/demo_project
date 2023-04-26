@@ -1,10 +1,17 @@
 package co.kr.ntels.demo_project.security;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+
 import co.kr.ntels.demo_project.redis.Redis;
 import co.kr.ntels.demo_project.security.dto.Token;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -14,12 +21,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+
 import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+
 
 @Component
 @RequiredArgsConstructor
@@ -27,7 +39,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider tokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
     private final Redis redis;
+
+
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+
 
     @Value("${spring.security.jwt.refreshTokenExpiration}")
     private int refreshTokenExpiration;
@@ -45,14 +61,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
        try {
            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt,jwtSecret)){
                Long userId = tokenProvider.getUserIdFromJWT(jwt,jwtSecret);
-               setAuthenticationInContext(userId, request);
+               setAuthenticationInContext(userId, request, jwt);
            }
        } catch (ExpiredJwtException e){
            String refreshToken = tokenProvider.validateRefreshToken(jwt);
            if (refreshToken != null) { // refresh Token이 redis에 저장되어있음
                Long userId = tokenProvider.getUserIdFromJWT(refreshToken, refreshSecret); // refreshToken 에서 userId 추출
 
-               Token newToken = tokenProvider.reGenerateToken(userId);
+               UserDetails userDetails = customUserDetailsService.loadUserById(userId);
+               UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+               authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+               Token newToken = tokenProvider.reGenerateToken(userId, authentication);
                String newAccessToken = newToken.getAccessToken();
                String newRefreshToken = newToken.getRefreshToken();
 
@@ -62,7 +82,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                redis.deleteByKey(refreshToken);
                redis.setRedis(newAccessToken,newRefreshToken,refreshTokenExpiration);   // redis에 새로 넣어주기
                redis.setRedis(newRefreshToken,newAccessToken,refreshTokenExpiration);
-               setAuthenticationInContext(userId, request);
+               setAuthenticationInContext(userId, request, jwt);
            }
        } catch (SignatureException e){
            redis.deleteByKey(redis.getValueByKey(jwt));
@@ -72,11 +92,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private void setAuthenticationInContext(Long userId, HttpServletRequest request){
-        UserDetails userDetails = customUserDetailsService.loadUserById(userId);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+    private void setAuthenticationInContext(Long userId, HttpServletRequest request, String jwt){
+        //UserDetails userDetails = customUserDetailsService.loadUserById(userId);
+        //UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        //authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        //SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        UsernamePasswordAuthenticationToken authentication = tokenProvider.getAuthenticationFromJWT(jwt, userId);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {
